@@ -1,0 +1,854 @@
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <link rel="icon" href="logo.png">
+        <title>LA Traffic Collisions</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.css' rel='stylesheet' />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <style>
+            @import url('https://fonts.googleapis.com/css?family=Montserrat:400,800,900');
+            #app {
+                font-family: 'Avenir', Helvetica, Arial, sans-serif;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                color: #2c3e50;
+                background-color:#222222;
+                min-height: 100vh;
+            }            
+            body{
+                margin: 0px;
+            }
+            .btn-dark {
+                background-color: #333333;
+                border-color: #333333;
+            }
+            .forward{
+                z-index: 1;
+                pointer-events: none;
+            }
+            #header{
+                padding:15px;
+                top: 0;
+                width: 100%;
+                color: #d3e5f7;
+            }
+            #header h1{
+                font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+                font-weight: 900;
+                font-size:50px;
+            }
+            #header small{
+                font-weight: 600;
+                font-size: 40%;
+            }
+            #header .logo{
+                width: 55px;
+                margin: 5px;
+            }
+            @media only screen and (max-width: 768px) {
+                #header h1 {
+                font-size:32px;
+                }
+                #header .logo {
+                width: 34px;
+                }
+            }
+            .tag {
+                cursor: pointer;
+                color:#d3e5f7;
+                font-size: 14px;
+            }
+            .tag:hover {
+                cursor: pointer;
+                color:#f2f7fc;
+            }
+            #date-spinner {
+                position: absolute;
+                top: 3px;
+                right: 20;                
+            }
+            #area-sidebar .progress {
+                background-color: #222222;
+                border-radius: 0px;
+                font-size:inherit;
+                height:inherit;
+
+            }
+            #area-sidebar .progress-bar {
+                background-color: #333333;
+                text-align: left;
+                
+            }
+            #map {
+                width: 100%;
+                height: 375px;
+            }
+            #map .mapboxgl-canvas {
+                position: inherit !important;
+            }
+            .mapboxgl-popup-content {
+                font-family: "Montserrat";    
+                padding: 15px;
+            }
+            #footer{
+                width:100%;
+                font-size: 10px;
+                color: #d3e5f7;
+            }
+            .fadeIn {
+                -webkit-animation: fadein 2s; /* Safari, Chrome and Opera > 12.1 */     
+                -moz-animation: fadein 2s; /* Firefox < 16 */
+                -ms-animation: fadein 2s; /* Internet Explorer */
+                -o-animation: fadein 2s; /* Opera < 12.1 */
+                animation: fadein 2s;
+            }
+            
+            @keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            
+            /* Firefox < 16 */
+            @-moz-keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            
+            /* Safari, Chrome and Opera > 12.1 */
+            @-webkit-keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            
+            /* Internet Explorer */
+            @-ms-keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            
+            /* Opera < 12.1 */
+            @-o-keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <div id="header" class="forward">
+                <div class="container fadeIn">
+                    <div class="row">
+                        <div class="col">
+                            <h1>LA<small> Collisions</small></h1>
+                        </div>
+                        <div class="col text-right">
+                            <img class="logo" src="logo.png"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="body">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-sm-8">
+                            <div id='map'></div>
+                            <div id="chart">
+                                <div class="row pt-4">
+                                    <div class="col-2">
+                                        <div class="btn-group-vertical btn-group-sm btn-group-toggle" data-toggle="buttons" role="group" aria-label="Chart Selection">
+                                            <label class="btn btn-dark active" onclick="setCategory('date')"><input type="radio" name="category" id="category-date" autocomplete="off" checked>Trending</label>
+                                            <label class="btn btn-dark" onclick="setCategory('time')"><input type="radio" name="category" id="category-time" autocomplete="off">Time of Day</label>
+                                            <label class="btn btn-dark" onclick="setCategory('age')"><input type="radio" name="category" id="category-age" autocomplete="off">Age</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-10">
+                                        <canvas id="category-chart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="form-group">
+                                <input class="form-control" id="date-picker">
+                                <div class="spinner-border" id="date-spinner"></div>
+                            </div>
+                            <div id="area-sidebar"></div>
+                        </div>                        
+                    </div>
+                </div>
+            </div>
+            <div id="footer" class="forward text-center">
+                <span id="footer-message">Data provided by earthquake.usgs.gov</span>
+            </div>
+        </div>
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.js'></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script>
+
+            let map = null; // for the map
+            let ctx = document.getElementById('category-chart').getContext('2d');  // for the chart
+            let chart= null;  // also for the chart
+            let datePicker = null; // holds the date range picker
+            let ta = {} // for global data
+
+            const LAGeoCenter = [-118.400352, 34.073620] // center data on LA
+            const descentTypes = [
+                {
+                    abbr: 'A', 
+                    name: 'Other Asian'                      
+                },
+                {
+                    abbr: 'B',
+                    name: 'Black'
+                },
+                {
+                    abbr: 'C',
+                    name: 'Chinese'
+                },
+                {
+                    abbr: 'D',
+                    name: 'Cambodian'
+                },
+                {
+                    abbr: 'F',
+                    name: 'Filipino'
+                },
+                {
+                    abbr: 'G',
+                    name: 'Guamanian'
+                },
+                {
+                    abbr: 'H',
+                    name: 'Hispanic/Latin/Mexican'
+                },
+                {
+                    abbr: 'J',
+                    name: 'Japanese'
+                },
+                {
+                    abbr: 'K',
+                    name: 'Korean'
+                },
+                {
+                    abbr: 'L',
+                    name: 'Laotian'
+                },
+                {
+                    abbr: 'O',
+                    name: 'Other'
+                },
+                {
+                    abbr: 'P',
+                    name: 'Pacific Islander'
+                },
+                {
+                    abbr: 'S',
+                    name: 'Samoan'
+                },
+                {
+                    abbr: 'U',
+                    name: 'Hawaiian'
+                },
+                {
+                    abbr: 'V',
+                    name: 'Vietnamese'
+                },
+                {
+                    abbr: 'W',
+                    name: 'White'
+                },
+                {
+                    abbr: 'X',
+                    name: 'Unknown'
+                },
+                {
+                    abbr: 'Z',
+                    name: 'Asian Indian'
+                }
+            ];
+            const taLoadCategory = {
+                time: function(){
+                    return ta.currentRegion.features.reduce(function(returnData, feature, i, array){                     
+                        // reduce to format as [{label:XX}, {count:YY}]
+                        let index = feature.properties;
+                        let searchLabels = null;
+                        // check if incident exists
+                        if(index && index.time_occ){
+                            // get hour
+                            let hour = index.time_occ.slice(0, 2);
+                            // check if hour label exists and update the count
+                            searchLabels = returnData.find(function(datum){
+                                if(datum.label === hour){
+                                    datum.count ++;
+                                    return true;
+                                };
+                            });
+                            // otherwise create the label
+                            if(!searchLabels){
+                                returnData.push({
+                                    label: hour,
+                                    count: 1
+                                });
+                            }
+                        }
+                        return returnData;
+                    },[]).sort(function(a, b){
+                        // Sort Data
+                        return a.label - b.label
+                    }).reduce(function(returnData, index, i, array){                       
+                        // reformat data as {labe;s:[], counts:[]}
+                        // set the hours
+                        // set am v pm
+                        let ap = ' AM'
+                        if(index.label >11){
+                            ap = ' PM';
+                        }
+
+                        if (index.label>12){
+                            index.label = index.label - 12;
+                        } else if (index.label == '00'){
+                            index.label = '12';
+                        } else {
+                            index.label = index.label - 0;
+                        }
+                        index.label += ap;
+
+                        returnData.labels.push(index.label);
+                        returnData.counts.push(index.count);
+                        return returnData
+                    }, {
+                        labels:[],
+                        counts: []
+                    });
+                },
+                date: function(){
+                    return ta.currentRegion.features.reduce(function(returnData, feature){
+                        // reduce to format as [{label:XX}, {count:YY}]
+                        let index = feature.properties;
+                        let searchLabels = null;
+                        // check if incident exists
+                        if(index && index.date_occ){
+                            // check if label exists and update the count
+                            searchLabels = returnData.find(function(datum){
+                                if(datum.label === index.date_occ){
+                                    datum.count ++;
+                                    return true;
+                                };
+                            });
+                            // otherwise create the label
+                            if(!searchLabels){
+                                returnData.push({
+                                    label: index.date_occ,
+                                    count: 1
+                                });
+                            }
+                        }
+                        return returnData;
+                    },[]).sort(function(a, b){
+                        // Sort Data
+                        let a_date = new Date(a.label);
+                        let b_date = new Date(b.label);
+                        return a_date - b_date;
+                    }).reduce(function(returnData, index, i, array){
+                        // reformat data as {labe;s:[], counts:[]}
+ 
+                        // set label to nice date
+                        index.label = new Date(index.label).toLocaleDateString();
+                        returnData.labels.push(index.label);
+                        returnData.counts.push(index.count);                                
+
+                        return returnData;
+                    }, {
+                        labels:[],
+                        counts: []
+                    });
+                },
+                age: function(){
+                    return ta.currentRegion.features.reduce(function(returnData, feature){
+                        // reduce to format as [{label:XX}, {count:YY}]
+                        let index = feature.properties;
+                        let searchLabels = null;
+                        let label = "";
+                        // check if incident exists
+                        if(index && index.vict_age){
+                            if (index.vict_age<26){
+                                label = "16 - 25";
+                            } else if (index.vict_age>=26 && index.vict_age<36) {
+                                label = "26 - 35";
+                            } else if (index.vict_age>=36 && index.vict_age<46) {
+                                label = "36 - 45";
+                            } else if (index.vict_age>=46 && index.vict_age<56) {
+                                label = "46 - 55";
+                            } else if (index.vict_age>=56 && index.vict_age<66) {
+                                label = "56 - 65";
+                            } else if (index.vict_age>=66 && index.vict_age<76) {
+                                label = "66 - 75";
+                            } else if (index.vict_age>=76) {
+                                label = "75 & Over";
+                            }
+
+                            // check if label exists and update the count
+                            searchLabels = returnData.find(function(datum){
+                                if(datum.label === label){
+                                    datum.count ++;
+                                    return true;
+                                };
+                            });
+                            // otherwise create the label
+                            if(!searchLabels){
+                                returnData.push({
+                                    label: label,
+                                    count: 1
+                                });
+                            }
+                        }
+                        return returnData;
+                    },[]).sort(function(a, b){
+                        // Sort Data
+                        return a.label.substring(0,2) - b.label.substring(0,2);
+                    }).reduce(function(returnData, index, i, array){
+                        // reformat data as {labe;s:[], counts:[]}
+                        returnData.labels.push(index.label);
+                        returnData.counts.push(index.count);                                
+                        return returnData
+                    }, {
+                        labels:[],
+                        counts: []
+                    });                
+                }
+            } // functions to parse categories
+
+            // function to parse the military time to human friendly eg 1300 - 1:00 PM
+            const timeParser = function(time){
+                if(time){
+                    let hour = time.slice(0, 2);
+                    let minute = time.slice(2, 4);
+                    let ap = 'AM'; 
+                    // set am v pm
+                    if(hour>11){
+                        ap = 'PM';
+                    }
+                    // set the hours
+                    if (hour>12){
+                        hour = hour - 12;
+                    } else if (hour == '00'){
+                        hour = '12';
+                    }
+                    return hour + ':' + minute + ' ' + ap;
+                }
+            }
+
+            // returns a full string for descent name eg W - White
+            const findDescent = function(abbr){
+                let descent  = descentTypes.find(function(type){
+                    return abbr == type.abbr;
+                });
+                if (descent){
+                    return descent.name;
+                }
+            }
+
+            // loads the sidebar on initialization
+            const loadSidebar = function (){
+                const areaSidebar = document.getElementById('area-sidebar');
+                // create an all element
+                let sideElementAll = document.createElement('div');
+                let areaNameAll = "'all'";
+
+                // clear divs
+                areaSidebar.innerHTML = '';
+
+                // Add all areas to sidebar
+                ta.regions.map(function(element){
+                    if(element.area_name !=='all'){
+                        // creates each side element
+                        let sideElement = document.createElement('div');
+                        let areaName = "'" + element.area_name + "'";
+                        let progress = 100*element.features.length/ta.regions[0].features.length; 
+
+                        // for each region add a sidebar element
+                        sideElement.classList.add('row');
+                        sideElement.innerHTML = '<div class="col"><div class="progress"><div class="progress-bar" style="width: ' + progress + '%" role="progressbar"><span class="tag" onclick="setArea('+ areaName + ')">' + element.area_name + ' <small><i>' + element.features.length + '</i></small></span></div></div></div>';
+                        areaSidebar.appendChild(sideElement);                        
+                    }
+                });
+                // adds all element to the bottom
+                sideElementAll.classList.add('row');
+                sideElementAll.innerHTML = '<div class="col"><span class="tag" onclick="setArea('+ areaNameAll + ')"> All <small><i>' + ta.data.features.length + '</i></small></span></div>';
+                areaSidebar.appendChild(sideElementAll);                            
+            }
+            
+            // set each area to the map when clicked
+            const setArea = function(area_name){
+                ta.currentAreaName === area_name;
+                // find the area
+                ta.currentRegion = ta.regions.find(function(region){
+                    return region.area_name === area_name;
+                })
+                // map the area
+                updateMap();
+                // update chart
+                setCategory(ta.currentCategory);
+            }
+
+            // sets each category
+            const setCategory = function(category_name){
+                let data = taLoadCategory[category_name](); // get the data
+
+                // update the global category name
+                ta.currentCategory = category_name;
+                
+                // update the chart
+                updateChart(data);
+            }
+
+            // update the map
+            const updateMap = function(){
+                // map the area
+                map.getSource('collisions').setData(ta.currentRegion);
+                // move to the area
+                map.easeTo({
+                    center: ta.currentRegion.location,
+                    bearing: 0,
+                    pitch: 60,
+                    zoom: ta.currentRegion.zoom,
+                    duration: 1500
+                });
+            }
+
+            // update the chart
+            const updateChart = function(data){
+                chart.data = {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Total',
+                        backgroundColor: 'rgb(255, 99, 132)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        data: data.counts
+                    }]
+                }
+                chart.update();
+            }
+
+            // download data
+            const downloadData = function(range, callback){
+                const spinner = document.getElementById("date-spinner");
+                const request = new XMLHttpRequest(); // for ajax
+                // get the data
+                spinner.style.display = "inline-block";
+                request.open('GET', 'https://data.lacity.org/resource/d5tf-ez2w.json?$where=date_occ between ' + range + '&$limit=10000', true);
+                request.onload = function() {
+                    if (request.status >= 200 && request.status < 400) {
+                        // Get data
+                        let response = JSON.parse(request.responseText);
+                        if(response && response.length){
+
+                            /****************************************************/
+                            /***********         PARSE BY ALL      *************/
+                            /****************************************************/
+                            ta.data = response.reduce(function(returnData, index){
+                                let coordinates = [];
+                                if(index && index.location_1){
+                                    // get geo cordinates
+                                    coordinates = [index.location_1.longitude, index.location_1.latitude];
+                                    // add full descent name to data
+                                    index.vict_descent_full = findDescent(index.vict_descent);
+                                    returnData.features.push({
+                                        "type": "Feature",
+                                        "properties":index,
+                                        "geometry":{
+                                            "type":"Point",
+                                            "coordinates":coordinates
+                                        }
+                                    });
+                                    return returnData;     
+                                }
+                            },{
+                                "type":"FeatureCollection",
+                                "area_name":"all",
+                                "coordinates":LAGeoCenter,
+                                "zoom": 9.7,
+                                "features":[]
+                            });
+
+                            /****************************************************/
+                            /***********         PARSE BY REGION       **********/
+                            /****************************************************/
+                            ta.regions = response.reduce(function(returnArray, index){
+                                let coordinates = [];
+                                let feature = {};
+                                let searchCollection = null;
+                                // check if incident exists
+                                if(index && index.area_name && index.location_1){
+                                    // get geo coordinates
+                                    coordinates = [index.location_1.longitude, index.location_1.latitude];
+                                    // add full descent name to data
+                                    index.vict_descent_full = findDescent(index.vict_descent);
+                                    feature =  {
+                                        "type": "Feature",
+                                        "properties":index,
+                                        "geometry":{
+                                            "type":"Point",
+                                            "coordinates":coordinates
+                                        }
+                                    };
+                                    // check if region exists
+                                    searchCollection = returnArray.find(function(collection){
+                                        if(collection.area_name === index.area_name){
+                                            let logitude = 0;
+                                            let latitude = 0;
+                                            // add the feature
+                                            collection.features.push(feature);
+                                            // calculate location center
+                                            longitude = (parseFloat(index.location_1.longitude)+(parseFloat(collection.location[0])*(collection.features.length-1)))/collection.features.length;
+                                            latitude = (parseFloat(index.location_1.latitude)+(parseFloat(collection.location[1])*(collection.features.length-1)))/collection.features.length;
+                                            collection.location = [longitude.toString(), latitude.toString()];
+                                            return true;
+                                        };
+                                    });
+                                    // otherwise create the region
+                                    if(!searchCollection){
+                                        returnArray.push({
+                                            "type":"FeatureCollection",
+                                            "area_name": index.area_name,
+                                            "location": coordinates,
+                                            "zoom": 11.5,
+                                            "features": [feature]
+                                        });
+                                    }
+                                }
+                                return returnArray;
+                            },[]).sort(function(a, b){return b.features.length - a.features.length});
+                            // add the all catagory
+                            ta.regions.push(ta.data);
+                        }
+                        spinner.style.display = "none";
+                        callback(true, false);
+                    } else {
+                        spinner.style.display = "none";
+                        callback(false, true);
+                    }
+                };
+                request.send();
+            }
+
+            // initialize the app
+            const loadApp = function(){
+                let today = new Date();// for daterangepicker
+                let defaultEnd = new Date(today.setDate(today.getDate() - 9));
+                let defaultStart =  new Date(today.setDate(today.getDate() - 7));
+                let defaultStartString = defaultStart.toISOString().split("T", 1)[0];
+                let defaultEndString = defaultEnd.toISOString().split("T", 1)[0];
+                let defaultRange = '%27' + defaultStartString + 'T00:00:00%27 and %27' + defaultEndString + 'T00:00:00%27';
+
+                // download data
+                downloadData(defaultRange, function(success, error){
+                    if(success){
+                        // set the loaded regions and initialize category to time
+                        ta.currentRegion = ta.data;
+                        ta.currentAreaName = 'all';
+                        ta.currentCategory = 'date';
+
+                        // load category and update chart
+                        updateChart(taLoadCategory.date());
+
+                        // load the sidebar
+                        loadSidebar();
+                    }
+                });
+
+                // initiate MapBox
+                mapboxgl.accessToken = "pk.eyJ1IjoiaW5pdGlhbGFwcHMiLCJhIjoiY2pzMnBzZGZnMDM0azQ5bDdyOHdraHV1ZyJ9.JdYkI5UwxhJgJOkbm2_8rw";
+                map = new mapboxgl.Map({
+                    container: "map",
+                    style: 'mapbox://styles/mapbox/dark-v9',
+                    center: LAGeoCenter,
+                    bearing: 180,
+                    zoom: 6
+                });
+
+                // Load Map
+                map.on('load', function() {
+                    // Create a popup, but don't add it to the map yet.
+                    var popup = new mapboxgl.Popup({
+                        closeButton: false,
+                        closeOnClick: false
+                    });
+
+                    map.easeTo({
+                        pitch: 60,
+                        bearing: 0,
+                        zoom: 9.7,
+                        duration: 8000
+                    });
+                
+                    // get data from 
+                    map.addSource('collisions', {
+                        type: 'geojson',
+                        data: ta.data
+                    });
+                
+                    var blueColour = 'hsl(204, 40%, 50%)';
+                
+                    map.addLayer({
+                        "id": "smalldot",
+                        "type": "circle",
+                        "source": "collisions",
+                        "layout": {
+                        },
+                        "paint": {
+                            "circle-color": 'white',
+                            'circle-radius': {
+                                "stops": [
+                                    [12, 1],
+                                    [16, 5],
+                                    [20, 10]
+                                ]
+                            }
+                        },
+                        "paint.stations":{
+                        "circle-color":"#ccc"
+                        }
+                    });
+                
+                    map.on('mouseenter', 'smalldot', function(e) {
+            
+                        // Change the cursor style as a UI indicator.
+                        map.getCanvas().style.cursor = 'pointer';
+                        var date = new Date(e.features[0].properties.date_occ);
+                        var time = timeParser(e.features[0].properties.time_occ);
+                        var coordinates = e.features[0].geometry.coordinates.slice();
+                        var description = "<b>" + e.features[0].properties.crm_cd_desc + "</b><br>" +
+                            "<span>Age: " + e.features[0].properties.vict_age + "</span><br>" +
+                            "<span>Sex: " + e.features[0].properties.vict_sex + "</span><br>" +
+                            "<span>Descent: " + e.features[0].properties.vict_descent_full + "</span><br>" +
+                            "<span>" + date.toLocaleDateString() + " " + time + "</span><br>";
+                        
+                        // Ensure that if the map is zoomed out such that multiple
+                        // copies of the feature are visible, the popup appears
+                        // over the copy being pointed to.
+                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                        }
+                
+                        // Populate the popup and set its coordinates
+                        // based on the feature found.
+                        popup.setLngLat(coordinates)
+                        .setHTML(description)
+                        .addTo(map);
+                    });
+
+                    map.on('mouseleave', 'smalldot', function() {
+                        map.getCanvas().style.cursor = '';
+                        popup.remove();
+                    });
+
+                    map.on('click', 'smalldot', function (e) {
+                        let windowWidth = map._container.offsetWidth || 600;
+                        let change = (180*(e.point.x/windowWidth))-90;//bearing change by marker pos
+                        let bearing = map.getBearing();   
+                        var coordinates = e.features[0].geometry.coordinates.slice();
+
+                        bearing += change;
+                        map.easeTo({
+                            center: coordinates,
+                            bearing: bearing,
+                            pitch: 60,
+                            zoom: 12,
+                            duration: 5000
+                        });
+                    })
+
+                    map.on('touchstart', 'smalldot', function(e) {
+
+                        var date = new Date(e.features[0].properties.time);
+                        var coordinates = e.features[0].geometry.coordinates.slice();
+                        var description = "<b>Magnitude: " + e.features[0].properties.mag + "</b><br>" +
+                            "<span>" + e.features[0].properties.place + "</span><br>" +
+                            "<span>" + date.toLocaleString() + "</span><br>";
+                        
+                        // Ensure that if the map is zoomed out such that multiple
+                        // copies of the feature are visible, the popup appears
+                        // over the copy being pointed to.
+                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                        }
+
+                        // Populate the popup and set its coordinates
+                        // based on the feature found.
+                        popup.setLngLat(coordinates)
+                        .setHTML(description)
+                        .addTo(map);
+                    });
+                    
+                });
+                
+                // load chart
+                chart = new Chart(ctx, {
+                    // The type of chart we want to create
+                    type: 'bar',
+                    // The data for our dataset
+                    data: {
+                        datasets: [{
+                            label: 'Total',
+                            backgroundColor: 'rgb(255, 99, 132)',
+                            borderColor: 'rgb(255, 99, 132)'
+                        }]
+                    },
+                    // Configuration options go here
+                    options: {
+                        maintainAspectRatio: false,
+                        legend: {
+                            display: false
+                        }
+                    }
+                });
+
+                // load the date range picker
+                datePicker =  flatpickr('#date-picker',{
+                    mode: "range",
+                    defaultDate: [defaultStartString, defaultEndString],
+                    maxDate: defaultEndString,
+                    onChange: function(selectedDates, dateStr, instance){
+                        if(selectedDates.length>1){
+                            let start = selectedDates[0].toISOString().split("T", 1)[0];
+                            let end = selectedDates[1].toISOString().split("T", 1)[0];
+                            let range = '%27' + start + 'T00:00:00%27 and %27' + end + 'T00:00:00%27';
+                            downloadData(range, function(success, error){
+                                if(success){
+                                    // update map and chart
+                                    setArea(ta.currentAreaName);
+                                    // reload the sidebar
+                                    loadSidebar();
+                                }
+                            })                   
+                        }
+                    }
+                });
+
+                // update the footer
+                document.getElementById("footer-message").innerHTML = "Data provided by Lacity.org";                
+            }
+
+            ta.data = {}; // raw geojson data
+            ta.regions = []; // data parsed by region
+            ta.currentRegion = {}; // loaded region
+            ta.currentAreaName = ""; // loaded area name
+            ta.currentCategory = ""; // loaded category
+            loadApp();
+            
+        </script>
+    </body>
+</html>
+
+  
+  
+  
