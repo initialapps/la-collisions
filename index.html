@@ -160,9 +160,9 @@
                                 <div class="row pt-4">
                                     <div class="col-2">
                                         <div class="btn-group-vertical btn-group-sm btn-group-toggle" data-toggle="buttons" role="group" aria-label="Chart Selection">
-                                            <label class="btn btn-dark active" onclick="setCategory('date')"><input type="radio" name="category" id="category-date" autocomplete="off" checked>Trending</label>
-                                            <label class="btn btn-dark" onclick="setCategory('time')"><input type="radio" name="category" id="category-time" autocomplete="off">Time of Day</label>
-                                            <label class="btn btn-dark" onclick="setCategory('age')"><input type="radio" name="category" id="category-age" autocomplete="off">Age</label>
+                                            <label class="btn btn-dark active" onclick="setCategory('date')"><input type="radio" name="category" id="category-date" autocomplete="off" checked>Trend</label>
+                                            <label class="btn btn-dark" onclick="setCategory('time')"><input type="radio" name="category" id="category-time" autocomplete="off">By Hour</label>
+                                            <label class="btn btn-dark" onclick="setCategory('age')"><input type="radio" name="category" id="category-age" autocomplete="off">By Age</label>
                                         </div>
                                     </div>
                                     <div class="col-10">
@@ -488,10 +488,13 @@
             
             // set each area to the map when clicked
             const setArea = function(area_name){
-                ta.currentAreaName === area_name;
+                // update the area
+                if(area_name){
+                    ta.currentAreaName = area_name;
+                }
                 // find the area
                 ta.currentRegion = ta.regions.find(function(region){
-                    return region.area_name === area_name;
+                    return region.area_name === ta.currentAreaName;
                 })
                 // map the area
                 updateMap();
@@ -825,7 +828,7 @@
                             downloadData(range, function(success, error){
                                 if(success){
                                     // update map and chart
-                                    setArea(ta.currentAreaName);
+                                    setArea();
                                     // reload the sidebar
                                     loadSidebar();
                                 }
